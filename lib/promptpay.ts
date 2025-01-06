@@ -17,7 +17,7 @@ export const generatePromptPayPayload = ({ phoneNumber, amount }: PromptPayConfi
 
     const pointOfInitiation = '000201'; // Fixed for QR
     const payloadFormatIndicator = '010211';
-    const merchantAccountInfo = `2937${sanitizedNumber.length.toString().padStart(2, '0')}${sanitizedNumber}`;
+    const merchantAccountInfo = `9591${sanitizedNumber.length.toString().padStart(2, '0')}${sanitizedNumber}`;
     const countryCode = '5802TH';
     const currencyCode = '5303764'; // THB (764)
     const amountStr = amount ? `54${String(amount.toFixed(2)).length.toString().padStart(2, '0')}${amount.toFixed(2)}` : '';
