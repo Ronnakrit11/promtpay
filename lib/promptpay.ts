@@ -4,7 +4,6 @@ export interface PromptPayConfig {
   amount: number;
 }
 
-// EMVCo QR Code format for PromptPay
 export const generatePromptPayPayload = ({ phoneNumber, amount }: PromptPayConfig): string => {
   try {
     // Remove any non-numeric characters from phone number
@@ -15,39 +14,58 @@ export const generatePromptPayPayload = ({ phoneNumber, amount }: PromptPayConfi
       throw new Error('Invalid phone number format');
     }
 
-    const pointOfInitiation = '000201'; // Fixed for QR
-    const payloadFormatIndicator = '010211';
-    const merchantAccountInfo = `9591${sanitizedNumber.length.toString().padStart(2, '0')}${sanitizedNumber}`;
-    const countryCode = '5802TH';
-    const currencyCode = '5303764'; // THB (764)
-    const amountStr = amount ? `54${String(amount.toFixed(2)).length.toString().padStart(2, '0')}${amount.toFixed(2)}` : '';
+    // Format phone number for PromptPay (remove first 0)
+    const formattedNumber = `0066${sanitizedNumber.substring(1)}`;
 
-    const payload = `${pointOfInitiation}${payloadFormatIndicator}${merchantAccountInfo}${countryCode}${currencyCode}${amountStr}`;
-    
-    // Add CRC16 checksum
-    const crc = calculateCRC16(payload);
-    return `${payload}6304${crc}`;
+    const fields = [
+      // ID + Payload Format Indicator + "01"
+      "000201",
+      // ID + POI Method + Static
+      "010212",
+      // Merchant Account Information
+      "2937",
+      // ID + Domestic Merchant
+      "0016A000000677010111",
+      // Phone Number Length + Phone Number
+      `01${formattedNumber.length.toString().padStart(2, '0')}${formattedNumber}`,
+      // Country Code + "TH"
+      "5802TH",
+      // Currency Code + "764" (THB)
+      "5303764",
+      // Amount
+      amount ? `54${amount.toFixed(2).length.toString().padStart(2, '0')}${amount.toFixed(2)}` : "",
+      // Country Code (TH)
+      "5802TH",
+      // CRC placeholder
+      "6304"
+    ].join("");
+
+    // Calculate CRC16
+    const crc = calculateCRC16(fields);
+    return fields + crc;
   } catch (error) {
     console.error('Error generating PromptPay payload:', error);
     throw new Error('Failed to generate PromptPay QR code');
   }
 };
 
-// CRC16 calculation for PromptPay
+// CRC16 CCITT-FALSE calculation
 function calculateCRC16(str: string): string {
-  const crcTable = new Int32Array(256);
-  for (let i = 0; i < 256; i++) {
-    let c = i;
+  let crc = 0xFFFF;
+  const polynomial = 0x1021;
+
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    crc ^= (c << 8);
+    
     for (let j = 0; j < 8; j++) {
-      c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+      if (crc & 0x8000) {
+        crc = ((crc << 1) ^ polynomial) & 0xFFFF;
+      } else {
+        crc = (crc << 1) & 0xFFFF;
+      }
     }
-    crcTable[i] = c;
   }
 
-  let crc = -1;
-  for (let i = 0; i < str.length; i++) {
-    const byte = str.charCodeAt(i);
-    crc = (crc >>> 8) ^ crcTable[(crc ^ byte) & 0xFF];
-  }
-  return ((crc ^ (-1)) >>> 0).toString(16).toUpperCase().padStart(4, '0');
+  return crc.toString(16).toUpperCase().padStart(4, '0');
 }
