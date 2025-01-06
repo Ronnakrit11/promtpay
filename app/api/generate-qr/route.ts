@@ -1,28 +1,21 @@
 import { NextResponse } from 'next/server';
 import QRCode from 'qrcode';
 import { generatePromptPayPayload } from '@/lib/promptpay';
-import { headers } from 'next/headers';
 
-// Configure your PromptPay ID here
-const MERCHANT_ID = '0891234567';
-
-export const dynamic = 'force-dynamic';
-export const runtime = 'edge';
+// Configure your PromptPay ID here (e.g., phone number)
+const MERCHANT_ID = '0994569591';
 
 export async function POST(request: Request) {
   try {
-    // Force dynamic rendering
-    headers();
-    
     const { amount } = await request.json();
 
-    // Generate PromptPay payload using our Edge-compatible implementation
+    // Generate PromptPay payload
     const payload = generatePromptPayPayload({
       phoneNumber: MERCHANT_ID,
       amount: Number(amount),
     });
 
-    // Generate QR code
+    // Generate QR code as data URL
     const qrCode = await QRCode.toDataURL(payload, {
       type: 'image/png',
       width: 400,
