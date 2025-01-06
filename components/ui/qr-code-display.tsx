@@ -1,90 +1,76 @@
+// Client-side component
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import QRCode from 'qrcode';
+import { generatePromptPayPayload } from '@/lib/promptpay';
+import { Card } from './card';
+
+// Configure your PromptPay ID here
+const MERCHANT_ID = '0994569591';
 
 interface QRCodeDisplayProps {
   amount: number;
 }
 
 export function QRCodeDisplay({ amount }: QRCodeDisplayProps) {
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [qrCode, setQRCode] = useState<string>('');
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const generateQR = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        
-        const response = await fetch('/api/generate-qr', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ amount }),
+        // Generate PromptPay payload
+        const payload = generatePromptPayPayload({
+          phoneNumber: MERCHANT_ID,
+          amount: amount,
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to generate QR code');
-        }
+        // Generate QR code
+        const qrDataUrl = await QRCode.toDataURL(payload, {
+          type: 'image/png',
+          width: 400,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#ffffff',
+          },
+        });
 
-        const data = await response.json();
-        
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        setQrCode(data.qrCode);
+        setQRCode(qrDataUrl);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to generate QR code');
-      } finally {
-        setLoading(false);
+        console.error('Error generating QR code:', err);
+        setError('Failed to generate QR code');
       }
     };
 
     generateQR();
   }, [amount]);
 
+  if (error) {
+    return (
+      <Card className="p-6 max-w-md mx-auto bg-destructive/10 text-destructive">
+        <p className="text-center">{error}</p>
+      </Card>
+    );
+  }
+
   return (
     <Card className="p-6 max-w-md mx-auto">
       <div className="space-y-4">
         <div className="text-center">
-          <h2 className="text-xl font-semibold mb-2">Scan to Pay</h2>
-          <p className="text-2xl font-bold text-primary">
-            ฿{amount.toFixed(2)}
-          </p>
+          <p className="text-2xl font-semibold">฿{amount.toFixed(2)}</p>
+          <p className="text-sm text-muted-foreground">via PromptPay</p>
         </div>
-        
-        <div className="flex items-center justify-center min-h-[400px]">
-          {loading && (
-            <div className="flex flex-col items-center gap-2">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">
-                Generating QR code...
-              </p>
-            </div>
-          )}
-          
-          {error && (
-            <div className="text-center text-destructive">
-              <p>{error}</p>
-              <p className="text-sm mt-2">Please try again later</p>
-            </div>
-          )}
-          
-          {!loading && !error && qrCode && (
+        {qrCode && (
+          <div className="flex justify-center">
             <img
               src={qrCode}
               alt="PromptPay QR Code"
               className="max-w-full h-auto"
-              width={400}
-              height={400}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </Card>
   );
