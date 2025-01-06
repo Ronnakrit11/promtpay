@@ -17,7 +17,7 @@ export default function Home() {
             </h1>
           </div>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Complete your payment securely using PromptPay. Simply scan the QR code
+            Complete your  payment securely using PromptPay. Simply scan the QR code
             below with your banking application to proceed with the payment.
           </p>
         </div>
